@@ -10,6 +10,17 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    matthews_corrcoef,
+    roc_auc_score
+)
+
+from sklearn.preprocessing import label_binarize
+
 # Load Dataset
 df = pd.read_csv("HCV-Egy-Data.csv")
 
@@ -77,3 +88,132 @@ test_data.to_csv(
 
 print("Models trained successfully!")
 print("Test data saved successfully!")
+
+def evaluate_model(model, X_test, y_test, model_name):
+
+    y_pred = model.predict(X_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+
+    precision = precision_score(
+        y_test,
+        y_pred,
+        average="weighted"
+    )
+
+    recall = recall_score(
+        y_test,
+        y_pred,
+        average="weighted"
+    )
+
+    f1 = f1_score(
+        y_test,
+        y_pred,
+        average="weighted"
+    )
+
+    mcc = matthews_corrcoef(
+        y_test,
+        y_pred
+    )
+
+    try:
+        y_prob = model.predict_proba(X_test)
+
+        classes = sorted(y.unique())
+
+        y_test_bin = label_binarize(
+            y_test,
+            classes=classes
+        )
+
+        auc = roc_auc_score(
+            y_test_bin,
+            y_prob,
+            multi_class="ovr"
+        )
+
+    except:
+        auc = "N/A"
+
+    return [
+        model_name,
+        accuracy,
+        auc,
+        precision,
+        recall,
+        f1,
+        mcc
+    ]
+
+results = []
+
+results.append(
+    evaluate_model(
+        lr,
+        X_test_scaled,
+        y_test,
+        "Logistic Regression"
+    )
+)
+
+results.append(
+    evaluate_model(
+        dt,
+        X_test,
+        y_test,
+        "Decision Tree"
+    )
+)
+
+results.append(
+    evaluate_model(
+        knn,
+        X_test_scaled,
+        y_test,
+        "KNN"
+    )
+)
+
+results.append(
+    evaluate_model(
+        nb,
+        X_test_scaled,
+        y_test,
+        "Naive Bayes"
+    )
+)
+
+results.append(
+    evaluate_model(
+        svm,
+        X_test_scaled,
+        y_test,
+        "SVM"
+    )
+)
+
+
+results_df = pd.DataFrame(
+    results,
+    columns=[
+        "Model",
+        "Accuracy",
+        "AUC",
+        "Precision",
+        "Recall",
+        "F1 Score",
+        "MCC"
+    ]
+)
+
+print("\nModel Comparison Report")
+print(results_df)
+
+results_df.to_csv(
+    "model_comparison.csv",
+    index=False
+)
+
+print("\nmodel_comparison.csv generated successfully!")
