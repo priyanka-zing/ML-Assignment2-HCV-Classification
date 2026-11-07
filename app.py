@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from sklearn.metrics import (
     accuracy_score,
@@ -156,45 +158,55 @@ if uploaded_file is not None:
 
         auc = "N/A"
 
-        st.subheader("Evaluation Metrics")
 
-    metrics_df = pd.DataFrame({
+    st.subheader("Evaluation Metrics")
 
-        "Metric": [
-            "Accuracy",
-            "AUC",
-            "Precision",
-            "Recall",
-            "F1 Score",
-            "MCC"
-        ],
+    col1, col2, col3 = st.columns(3)
 
-        "Value": [
-            accuracy,
-            auc,
-            precision,
-            recall,
-            f1,
-            mcc
-        ]
-    })
+    with col1:
+        st.metric("Accuracy", f"{accuracy:.4f}")
 
-    st.table(metrics_df)
+    with col2:
+        st.metric("AUC", f"{auc:.4f}")
 
-    st.subheader(
-        "Confusion Matrix"
-    )
+    with col3:
+        st.metric("Precision", f"{precision:.4f}")
+
+    col4, col5, col6 = st.columns(3)
+
+    with col4:
+        st.metric("Recall", f"{recall:.4f}")
+
+    with col5:
+        st.metric("F1 Score", f"{f1:.4f}")
+
+    with col6:
+        st.metric("MCC", f"{mcc:.4f}")
+
+    st.subheader("Confusion Matrix")
 
     cm = confusion_matrix(
         y,
         y_pred
     )
 
-    st.write(cm)
+    fig, ax = plt.subplots(figsize=(6, 4))
 
-    st.subheader(
-        "Classification Report"
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        ax=ax
     )
+
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.set_title("Confusion Matrix")
+
+    st.pyplot(fig)
+
+    st.subheader("Classification Report")
 
     report = classification_report(
         y,
@@ -202,3 +214,25 @@ if uploaded_file is not None:
     )
 
     st.text(report)
+
+    st.subheader("Model Comparison Results")
+
+    comparison_df = pd.read_csv("model_comparison.csv")
+
+    st.dataframe(comparison_df)
+
+    best_model = comparison_df.loc[
+        comparison_df["Accuracy"].idxmax()
+    ]
+
+    st.success(
+        f"Best Model: {best_model['Model']} "
+        f"(Accuracy = {best_model['Accuracy']:.4f})"
+    )
+
+    st.download_button(
+        label="Download Model Comparison Report",
+        data=comparison_df.to_csv(index=False),
+        file_name="model_comparison.csv",
+        mime="text/csv"
+    )
