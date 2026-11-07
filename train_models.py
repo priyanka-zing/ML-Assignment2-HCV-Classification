@@ -1,3 +1,12 @@
+# ==================================================
+# HCV Multi-Class Classification Model Training
+# ==================================================
+# This script trains multiple machine learning
+# classification models using the HCV Egyptian
+# Patients dataset, evaluates their performance,
+# and saves trained models for deployment in the
+# Streamlit application.
+# ==================================================
 import pandas as pd
 import joblib
 import os
@@ -21,16 +30,32 @@ from sklearn.metrics import (
 
 from sklearn.preprocessing import label_binarize
 
+# --------------------------------------------------
 # Load Dataset
+# --------------------------------------------------
+# Load the HCV Egyptian Patients dataset
+# containing clinical and laboratory features
+# used for disease staging classification.
 df = pd.read_csv("HCV-Egy-Data.csv")
 
-# Define Target
+# --------------------------------------------------
+# Define Features and Target Variable
+# --------------------------------------------------
+# Target variable:
+# Baseline Histological Staging
+#
+# Features:
+# All remaining clinical attributes.
 target_column = "Baselinehistological staging"
 
 X = df.drop(target_column, axis=1)
 y = df[target_column]
 
-# Split Data
+# --------------------------------------------------
+# Split Dataset into Training and Testing Sets
+# --------------------------------------------------
+# Use 80% of records for training and 20%
+# for model evaluation.
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
@@ -38,44 +63,76 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42
 )
 
-# Scale Features
+# --------------------------------------------------
+# Standardize Feature Values
+# --------------------------------------------------
+# Feature scaling is required for distance-based
+# and optimization-based algorithms such as
+# Logistic Regression, KNN and SVM.
 scaler = StandardScaler()
 
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# Create models folder if not exists
+# --------------------------------------------------
+# Create Directory for Trained Models
+# --------------------------------------------------
+# Store trained models and preprocessing
+# artifacts used during deployment.
+
 os.makedirs("models", exist_ok=True)
 
-# Save scaler
+# Save fitted scaler for reuse in Streamlit app
 joblib.dump(scaler, "models/scaler.pkl")
 
-# Logistic Regression
+# --------------------------------------------------
+# Train Logistic Regression Model
+# --------------------------------------------------
+# Baseline linear classification model.
 lr = LogisticRegression(max_iter=2000)
 lr.fit(X_train_scaled, y_train)
 joblib.dump(lr, "models/logistic.pkl")
 
-# Decision Tree
+# --------------------------------------------------
+# Train Decision Tree Classifier
+# --------------------------------------------------
+# Tree-based model used for interpretable
+# classification.
 dt = DecisionTreeClassifier(random_state=42)
 dt.fit(X_train, y_train)
 joblib.dump(dt, "models/decision_tree.pkl")
 
-# KNN
+# --------------------------------------------------
+# Train K-Nearest Neighbors Model
+# --------------------------------------------------
+# Instance-based learning algorithm using
+# nearest neighbor similarity.
 knn = KNeighborsClassifier(n_neighbors=5)
 knn.fit(X_train_scaled, y_train)
 joblib.dump(knn, "models/knn.pkl")
 
-# Naive Bayes
+# --------------------------------------------------
+# Train Naive Bayes Classifier
+# --------------------------------------------------
+# Probabilistic classification algorithm.
 nb = GaussianNB()
 nb.fit(X_train_scaled, y_train)
 joblib.dump(nb, "models/naive_bayes.pkl")
 
-# SVM
+# --------------------------------------------------
+# Train Support Vector Machine Model
+# --------------------------------------------------
+# Margin-based classifier using optimized
+# decision boundaries.
 svm = SVC(probability=True)
 svm.fit(X_train_scaled, y_train)
 joblib.dump(svm, "models/svm.pkl")
 
-# Save Test Data
+# --------------------------------------------------
+# Save Test Dataset
+# --------------------------------------------------
+# Export testing records to support model
+# evaluation in the Streamlit application.
 test_data = pd.concat(
     [pd.DataFrame(X_test), pd.DataFrame(y_test)],
     axis=1
@@ -89,10 +146,17 @@ test_data.to_csv(
 print("Models trained successfully!")
 print("Test data saved successfully!")
 
+# --------------------------------------------------
+# Model Evaluation Function
+# --------------------------------------------------
+# Calculates Accuracy, AUC, Precision,
+# Recall, F1 Score and MCC for each model.
 def evaluate_model(model, X_test, y_test, model_name):
 
+# Generate predictions using trained model
     y_pred = model.predict(X_test)
 
+# Compute model performance metrics
     accuracy = accuracy_score(y_test, y_pred)
 
     precision = precision_score(
@@ -118,6 +182,8 @@ def evaluate_model(model, X_test, y_test, model_name):
         y_pred
     )
 
+# Calculate multiclass AUC score using
+# One-vs-Rest strategy
     try:
         y_prob = model.predict_proba(X_test)
 
@@ -147,6 +213,11 @@ def evaluate_model(model, X_test, y_test, model_name):
         mcc
     ]
 
+# --------------------------------------------------
+# Evaluate All Trained Models
+# --------------------------------------------------
+# Store performance metrics of each model
+# for comparison and reporting.
 results = []
 
 results.append(
@@ -195,6 +266,8 @@ results.append(
 )
 
 
+# Create comparison table containing
+# evaluation results of all classifiers
 results_df = pd.DataFrame(
     results,
     columns=[
@@ -211,6 +284,8 @@ results_df = pd.DataFrame(
 print("\nModel Comparison Report")
 print(results_df)
 
+# Save model comparison report for
+# analysis and Streamlit visualization
 results_df.to_csv(
     "model_comparison.csv",
     index=False
